@@ -1,0 +1,192 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.neighbors import NearestNeighbors
+import matplotlib.pyplot as plt
+
+# Sample data with additional features for customer analysis
+data = pd.DataFrame({
+    'customer_id': range(1, 11),
+    'customer_name': ['Alice', 'Bob', 'Charlie', 'David', 'Eva', 'Frank', 'Grace', 'Hannah', 'Ian', 'Jane'],
+    'age': [23, 25, 31, 45, 22, 35, 42, 21, 33, 30],
+    'annual_income': [15000, 30000, 25000, 50000, 20000, 45000, 42000, 19000, 37000, 32000],
+    'spending_score': [75, 55, 60, 80, 50, 85, 78, 60, 68, 75],
+    'purchase_history': [12, 23, 19, 34, 20, 33, 25, 18, 21, 22],
+    'loyalty_score': [8, 5, 7, 9, 6, 8, 7, 4, 7, 6],
+    'average_order_value': [100, 250, 200, 400, 150, 350, 330, 160, 300, 280]
+})
+
+# Standardize relevant columns
+scaler = StandardScaler()
+data[[ 'annual_income', 'spending_score', 'purchase_history', 'loyalty_score', 'average_order_value']] = scaler.fit_transform(
+    data[[ 'annual_income', 'spending_score', 'purchase_history', 'loyalty_score', 'average_order_value']]
+)
+print("Data ready for segmentation:")
+print(data.head())
+
+# Given standardized age values
+standardized_ages = [-0.979402827, -0.725012483, 0.038158552, 1.818890965, -1.106598,
+                     0.546939241, 1.437305448, -1.233793172, 0.292548896, -0.089036621]
+
+# Replace these with the actual mean and standard deviation values for the 'age' column
+original_mean_age = 30  # Example value; replace with the actual mean
+original_std_age = 10   # Example value; replace with the actual standard deviation
+
+# Convert standardized values back to original scale
+original_ages = [(value * original_std_age) + original_mean_age for value in standardized_ages]
+# Determine the optimal number of clusters using the Elbow method
+inertia = []
+K = range(1, 10)
+for k in K:
+    kmeans = KMeans(n_clusters=k, random_state=0)
+    kmeans.fit(data[['annual_income', 'spending_score', 'loyalty_score', 'average_order_value']])
+    inertia.append(kmeans.inertia_)
+
+# Plot the Elbow Curve
+plt.figure(figsize=(8, 4))
+plt.plot(K, inertia, 'bx-')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Inertia')
+plt.title('Elbow Method for Optimal k')
+plt.show()
+
+# Use the optimal k (e.g., k=4) based on the elbow plot
+optimal_k = 4
+kmeans = KMeans(n_clusters=optimal_k, random_state=0)
+data['segment'] = kmeans.fit_predict(data[['annual_income', 'spending_score', 'loyalty_score', 'average_order_value']])
+
+print("Data with Segment labels:")
+print(data[['customer_name', 'segment']])
+
+# Visualize segments based on income and spending score
+plt.figure(figsize=(10, 6))
+for i in range(optimal_k):
+    plt.scatter(data.loc[data['segment'] == i, 'annual_income'], data.loc[data['segment'] == i, 'spending_score'], label=f'Segment {i}')
+plt.xlabel('Annual Income')
+plt.ylabel('Spending Score')
+plt.title('Customer Segments')
+plt.legend()
+plt.show()
+
+# Create a rating matrix for recommendations
+rating_matrix = data.pivot_table(index='customer_id', columns='segment', values='purchase_history').fillna(0)
+
+# Implement a collaborative filtering recommendation system
+knn = NearestNeighbors(metric='cosine', algorithm='brute')
+knn.fit(rating_matrix)
+
+# Function to recommend similar customers
+def recommend_customers(customer_id, n_recommendations=3):
+    customer_index = rating_matrix.index.get_loc(customer_id)
+    distances, indices = knn.kneighbors(rating_matrix.iloc[customer_index, :].values.reshape(1, -1), n_neighbors=n_recommendations + 1)
+    similar_customers = [rating_matrix.index[i] for i in indices.flatten()][1:]
+    similar_customer_names = data.loc[data['customer_id'].isin(similar_customers), 'customer_name'].values
+    return similar_customer_names
+
+# Test recommendation for a specific customer
+test_customer_id = 1
+recommended_customers = recommend_customers(test_customer_id)
+print(f"Recommended customers for customer {test_customer_id} ({data.loc[data['customer_id'] == test_customer_id, 'customer_name'].values[0]}): {recommended_customers}")
+
+# Save the data with segment and recommendations to a CSV
+data.to_csv("customer_segmentation_results.csv", index=False)
+print("Results saved as 'customer_segmentation_results.csv'")
+
+# Given standardized age values
+standardized_ages = [-0.979402827, -0.725012483, 0.038158552, 1.818890965, -1.106598,
+                     0.546939241, 1.437305448, -1.233793172, 0.292548896, -0.089036621]
+
+# Replace these with the actual mean and standard deviation values for the 'age' column
+original_mean_age = 30  # Example value; replace with the actual mean
+original_std_age = 10   # Example value; replace with the actual standard deviation
+
+# Convert standardized values back to original scale
+original_ages = [(value * original_std_age) + original_mean_age for value in standardized_ages]
+
+# Print the de-standardized ages
+print("Original Age values:", original_ages)
+
+import matplotlib.pyplot as plt
+
+# Given standardized age values
+standardized_ages = [-0.979402827, -0.725012483, 0.038158552, 1.818890965, -1.106598,
+                     0.546939241, 1.437305448, -1.233793172, 0.292548896, -0.089036621]
+
+# Replace these with the actual mean and standard deviation values for the 'age' column
+original_mean_age = 30  # Example mean; replace with actual mean
+original_std_age = 10   # Example standard deviation; replace with actual std
+
+# Convert standardized values back to original scale
+original_ages = [(value * original_std_age) + original_mean_age for value in standardized_ages]
+
+# Create a figure with subplots
+plt.figure(figsize=(10, 15))
+
+# 1. Bar Plot to compare original and standardized age values
+plt.subplot(3, 1, 1)
+bar_width = 0.35
+index = range(len(standardized_ages))
+plt.bar(index, original_ages, bar_width, label="Original Ages", color='b')
+plt.bar([i + bar_width for i in index], standardized_ages, bar_width, label="Standardized Ages", color='r')
+plt.xlabel("Customer Index")
+plt.ylabel("Age Value")
+plt.title("Comparison of Original and Standardized Age Values")
+plt.legend()
+
+# Adjust layout and show the plots
+plt.tight_layout()
+plt.show()
+
+import matplotlib.pyplot as plt
+
+# Given standardized age values
+standardized_ages = [-0.979402827, -0.725012483, 0.038158552, 1.818890965, -1.106598,
+                     0.546939241, 1.437305448, -1.233793172, 0.292548896, -0.089036621]
+
+# Replace these with the actual mean and standard deviation values for the 'age' column
+original_mean_age = 30  # Example mean; replace with actual mean
+original_std_age = 10   # Example standard deviation; replace with actual std
+
+# Convert standardized values back to original scale
+original_ages = [(value * original_std_age) + original_mean_age for value in standardized_ages]
+
+# Create a larger figure with subplots
+plt.figure(figsize=(18, 12))  # Increased figure size
+
+# 2. Histogram to show the distribution of original and standardized age values
+plt.subplot(3, 1, 2)
+plt.hist(original_ages, bins=5, alpha=0.5, label='Original Ages', color='b')
+plt.hist(standardized_ages, bins=5, alpha=0.5, label='Standardized Ages', color='r')
+plt.xlabel("Age Value")
+plt.ylabel("Frequency")
+plt.title("Distribution of Original and Standardized Age Values")
+plt.legend()
+
+
+import matplotlib.pyplot as plt
+
+# Given standardized age values
+standardized_ages = [-0.979402827, -0.725012483, 0.038158552, 1.818890965, -1.106598,
+                     0.546939241, 1.437305448, -1.233793172, 0.292548896, -0.089036621]
+
+# Replace these with the actual mean and standard deviation values for the 'age' column
+original_mean_age = 30  # Example mean; replace with actual mean
+original_std_age = 10   # Example standard deviation; replace with actual std
+
+# Convert standardized values back to original scale
+original_ages = [(value * original_std_age) + original_mean_age for value in standardized_ages]
+
+# Create a larger figure with subplots
+plt.figure(figsize=(18, 12))  # Increased figure size
+
+# 3. Scatter Plot to show relationship between standardized and original age values
+plt.subplot(3, 1, 3)
+plt.scatter(standardized_ages, original_ages, color='purple')
+plt.xlabel("Standardized Age")
+plt.ylabel("Original Age")
+plt.title("Scatter Plot of Standardized vs. Original Age Values")
+
+# Create a figure with subplots
+plt.figure(figsize=(10, 15))
